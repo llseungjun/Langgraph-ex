@@ -19,10 +19,14 @@ def run_chat_loop(graph: StateGraph) -> None:
 
 def stream_graph_updates(graph: StateGraph, user_input: str) -> None:
     config = {"configurable": {"thread_id": "1"}} # 특정 대화에서 핵심 쓰레드로 사용될 id 값 설정
-    for event in graph.stream({"messages": [{"role": "user", "content": user_input}]}, config):
-        for value in event.values():
-            print("Assistant:", value["messages"][-1].content)
-
+    events = graph.stream(
+        {"messages": [{"role": "user", "content": user_input}]}, 
+        config, 
+        stream_mode="values" ,
+    )
+    for event in events:
+        if "messages" in event:
+            event["messages"][-1].pretty_print()
 
 def display_graph(graph: StateGraph) -> None:
     import matplotlib.pyplot as plt
