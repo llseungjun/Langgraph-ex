@@ -5,7 +5,8 @@ from langchain_tavily import TavilySearch
 from langchain_core.messages import BaseMessage
 from typing_extensions import TypedDict
 
-from langgraph.graph import StateGraph, START, END
+from langgraph.checkpoint.memory import MemorySaver
+from langgraph.graph import StateGraph
 from langgraph.graph.message import add_messages
 from langgraph.prebuilt import ToolNode, tools_condition
 
@@ -56,11 +57,14 @@ graph_builder.add_conditional_edges(
     "chatbot",
     tools_condition, # 특정 노드에서 다음 노드로 라우팅해주기 위한 모듈
 )
-# Any time a tool is called, we return to the chatbot to decide the next step
+
 # graph builder에 각 노드 간 edge 추가
 graph_builder.add_edge("tools", "chatbot")
-graph_builder.add_edge(START, "chatbot")
-graph = graph_builder.compile() # graph 컴파일
+graph_builder.set_entry_point("chatbot") # start랑 chatbot 노드랑 연결짓는 대신 chatbot 노드를 entry point로 지정
+memory = MemorySaver() # memory saver 지정 : multi turn 대화에서 이전 대화 내역 기억 용도
+                    # 실제 서비스 운영 시에는 사용자 대화 내역을 db에 저장 후 SqliteSaver 또는 PostgresSaver로 연결하도록 변경
+graph = graph_builder.compile(checkpointer=memory) # graph compile시에 checkpointer에 memory saver 지정
+                                                # graph stream시에 config 추가 설정 필요, utils.py/stream_graph_updates 참고
 
 if __name__ == "__main__":
     run_chat_loop(graph)
